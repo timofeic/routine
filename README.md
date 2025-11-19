@@ -2,6 +2,9 @@
 
 A fun and interactive Next.js app designed to help children complete their morning and evening routines. Built with visual task cards, timers, and gamification to make daily routines engaging for kids aged 4-5 and up.
 
+## Try it out
+https://routine-bice.vercel.app/
+
 ## Features
 
 ### 🎯 Core Functionality
