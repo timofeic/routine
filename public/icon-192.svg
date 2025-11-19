@@ -7,8 +7,24 @@
       <stop offset="100%" style="stop-color:#f472b6;stop-opacity:1" />
     </linearGradient>
   </defs>
-  <rect width="192" height="192" rx="28.799999999999997" fill="url(#grad)"/>
-  <text x="50%" y="50%" text-anchor="middle" dy=".35em" font-size="96" font-family="Arial, sans-serif">
-    ✅
-  </text>
+  
+  <!-- Background with rounded corners -->
+  <rect width="192" height="192" rx="38.400000000000006" fill="url(#grad)"/>
+  
+  <!-- Circle background for check -->
+  <circle cx="96" cy="96" r="61.44" fill="white" opacity="0.95"/>
+  
+  <!-- Checkmark -->
+  <path d="M 67.19999999999999 96 L 86.4 115.19999999999999 L 124.80000000000001 72.96000000000001" 
+        stroke="#8b5cf6" 
+        stroke-width="15.36" 
+        stroke-linecap="round" 
+        stroke-linejoin="round" 
+        fill="none"/>
+  
+  <!-- Small stars/sparkles for fun -->
+  <circle cx="48" cy="48" r="7.68" fill="white" opacity="0.9"/>
+  <circle cx="144" cy="48" r="7.68" fill="white" opacity="0.9"/>
+  <circle cx="48" cy="144" r="7.68" fill="white" opacity="0.9"/>
+  <circle cx="144" cy="144" r="7.68" fill="white" opacity="0.9"/>
 </svg>
