@@ -1,0 +1,57 @@
+@import "tailwindcss";
+
+@theme {
+  --font-family-sans: var(--font-geist-sans);
+  --font-family-mono: var(--font-geist-mono);
+
+  /* Larger base font for iPad */
+  --font-size-base: 18px;
+
+  /* Custom animations */
+  --animate-bounce-in: bounce-in 0.5s ease-out;
+}
+
+@keyframes bounce-in {
+  0% {
+    transform: scale(0.3);
+    opacity: 0;
+  }
+  50% {
+    transform: scale(1.05);
+  }
+  70% {
+    transform: scale(0.9);
+  }
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+.animate-bounce-in {
+  animation: bounce-in 0.5s ease-out;
+}
+
+.delay-100 {
+  animation-delay: 100ms;
+}
+
+.delay-200 {
+  animation-delay: 200ms;
+}
+
+.delay-300 {
+  animation-delay: 300ms;
+}
+
+/* Make touch targets larger for kids */
+button, a {
+  min-height: 44px;
+  min-width: 44px;
+}
+
+/* Disable text selection for better touch experience */
+.no-select {
+  -webkit-user-select: none;
+  user-select: none;
+}
