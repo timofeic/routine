@@ -78,6 +78,42 @@ npm run build
 npm start
 ```
 
+## Progressive Web App (PWA)
+
+This app is a **Progressive Web App** that can be installed on your iPad home screen for a native app experience!
+
+### Installing on iPad (iOS/iPadOS)
+
+1. Open the app in **Safari** (must use Safari, not Chrome)
+2. Tap the **Share** button (square with arrow pointing up)
+3. Scroll down and tap **"Add to Home Screen"**
+4. Customize the name if desired (defaults to "Routine")
+5. Tap **"Add"**
+6. The app icon will appear on your home screen!
+
+### Installing on Android
+
+1. Open the app in Chrome
+2. Look for the **"Install App"** banner at the bottom
+3. Tap **"Install Now"** or use the browser menu → **"Install App"**
+4. The app will be added to your home screen
+
+### Installing on Desktop (Chrome/Edge)
+
+1. Open the app in Chrome or Edge
+2. Look for the install icon (⊕) in the address bar
+3. Click it and confirm installation
+4. The app will open in its own window
+
+### PWA Features
+
+✅ **Offline Support** - Works without internet after first load
+✅ **Home Screen Icon** - Launch like a native app
+✅ **Standalone Mode** - Runs without browser UI
+✅ **Fast Loading** - Cached resources for instant startup
+✅ **Auto-Updates** - Gets new features automatically
+✅ **Local Data** - Everything stored on your device
+
 ## Technology Stack
 
 - **Framework**: Next.js 16 (App Router)
