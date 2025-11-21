@@ -16,8 +16,11 @@ export default function RecordsPage() {
     );
   }
 
-  const morningTasks = data.tasks.filter((t: { routineType: string }) => t.routineType === 'morning').sort((a: { order: number }, b: { order: number }) => a.order - b.order);
-  const eveningTasks = data.tasks.filter((t: { routineType: string }) => t.routineType === 'evening').sort((a: { order: number }, b: { order: number }) => a.order - b.order);
+  const getTasksByRoutine = (routineId: string) => {
+    return data.tasks
+      .filter((t: { routineId: string }) => t.routineId === routineId)
+      .sort((a: { order: number }, b: { order: number }) => a.order - b.order);
+  };
 
   const formatTime = (seconds: number) => {
     const mins = Math.floor(seconds / 60);
@@ -67,60 +70,42 @@ export default function RecordsPage() {
               <h2 className="text-4xl font-black text-white drop-shadow-lg">World Records</h2>
             </div>
 
-            <div className="grid gap-6 md:grid-cols-2">
-              {/* Morning World Records */}
-              <div className="rounded-2xl bg-white p-6">
-                <h3 className="mb-4 text-2xl font-bold text-gray-900">Morning Routine</h3>
-                <div className="space-y-3">
-                  {morningTasks.map((task: { id: string; name: string; icon: string }) => {
-                    const wr = getWorldRecord(data, task.id);
-                    return (
-                      <div key={task.id} className="flex items-center justify-between rounded-xl bg-yellow-50 p-3">
-                        <div className="flex items-center gap-2">
-                          <span className="text-3xl">{task.icon}</span>
-                          <span className="font-semibold text-gray-900">{task.name}</span>
-                        </div>
-                        {wr ? (
-                          <div className="text-right">
-                            <div className="text-2xl font-bold text-yellow-900">{formatTime(wr.time)}</div>
-                            <div className="text-sm text-yellow-700">{wr.kidName}</div>
-                            <div className="text-xs text-yellow-600">{formatDate(wr.date)}</div>
-                          </div>
-                        ) : (
-                          <div className="text-sm text-gray-500">No record yet</div>
-                        )}
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
+            <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+              {data.routines.map((routine: { id: string; name: string; icon: string }) => {
+                const routineTasks = getTasksByRoutine(routine.id);
+                if (routineTasks.length === 0) return null;
 
-              {/* Evening World Records */}
-              <div className="rounded-2xl bg-white p-6">
-                <h3 className="mb-4 text-2xl font-bold text-gray-900">Evening Routine</h3>
-                <div className="space-y-3">
-                  {eveningTasks.map((task: { id: string; name: string; icon: string }) => {
-                    const wr = getWorldRecord(data, task.id);
-                    return (
-                      <div key={task.id} className="flex items-center justify-between rounded-xl bg-yellow-50 p-3">
-                        <div className="flex items-center gap-2">
-                          <span className="text-3xl">{task.icon}</span>
-                          <span className="font-semibold text-gray-900">{task.name}</span>
-                        </div>
-                        {wr ? (
-                          <div className="text-right">
-                            <div className="text-2xl font-bold text-yellow-900">{formatTime(wr.time)}</div>
-                            <div className="text-sm text-yellow-700">{wr.kidName}</div>
-                            <div className="text-xs text-yellow-600">{formatDate(wr.date)}</div>
+                return (
+                  <div key={routine.id} className="rounded-2xl bg-white p-6">
+                    <div className="mb-4 flex items-center gap-2">
+                      <span className="text-3xl">{routine.icon}</span>
+                      <h3 className="text-2xl font-bold text-gray-900">{routine.name}</h3>
+                    </div>
+                    <div className="space-y-3">
+                      {routineTasks.map((task: { id: string; name: string; icon: string }) => {
+                        const wr = getWorldRecord(data, task.id);
+                        return (
+                          <div key={task.id} className="flex items-center justify-between rounded-xl bg-yellow-50 p-3">
+                            <div className="flex items-center gap-2">
+                              <span className="text-2xl">{task.icon}</span>
+                              <span className="text-sm font-semibold text-gray-900">{task.name}</span>
+                            </div>
+                            {wr ? (
+                              <div className="text-right">
+                                <div className="text-lg font-bold text-yellow-900">{formatTime(wr.time)}</div>
+                                <div className="text-xs text-yellow-700">{wr.kidName}</div>
+                                <div className="text-xs text-yellow-600">{formatDate(wr.date)}</div>
+                              </div>
+                            ) : (
+                              <div className="text-xs text-gray-500">No record</div>
+                            )}
                           </div>
-                        ) : (
-                          <div className="text-sm text-gray-500">No record yet</div>
-                        )}
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                );
+              })}
             </div>
           </div>
 
@@ -145,76 +130,56 @@ export default function RecordsPage() {
                   </div>
                 </div>
 
-                <div className="grid gap-6 md:grid-cols-2">
-                  {/* Morning Personal Bests */}
-                  <div>
-                    <h3 className="mb-4 text-xl font-bold text-gray-700">Morning Routine</h3>
-                    <div className="space-y-2">
-                      {morningTasks.map((task: { id: string; name: string; icon: string }) => {
-                        const pbRecord = data.personalRecords.find(
-                          (r: { kidId: string; taskId: string }) => r.kidId === kid.id && r.taskId === task.id
-                        );
-                        const wr = getWorldRecord(data, task.id);
-                        const isWorldRecord = wr && wr.kidId === kid.id;
+                <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+                  {data.routines.map((routine: { id: string; name: string; icon: string; color: string }) => {
+                    const routineTasks = getTasksByRoutine(routine.id);
+                    const kidRecordsInRoutine = routineTasks.filter(task => {
+                      return data.personalRecords.some((r: { kidId: string; taskId: string }) =>
+                        r.kidId === kid.id && r.taskId === task.id
+                      );
+                    });
 
-                        if (!pbRecord) return null;
+                    if (kidRecordsInRoutine.length === 0) return null;
 
-                        return (
-                          <div
-                            key={task.id}
-                            className={`flex items-center justify-between rounded-xl p-3 ${
-                              isWorldRecord ? 'bg-yellow-100 border-2 border-yellow-400' : 'bg-blue-50'
-                            }`}
-                          >
-                            <div className="flex items-center gap-2">
-                              <span className="text-2xl">{task.icon}</span>
-                              <span className="font-semibold text-gray-900">{task.name}</span>
-                              {isWorldRecord && <span className="text-xl">🥇</span>}
-                            </div>
-                            <div className="text-right">
-                              <div className="text-xl font-bold text-blue-900">{formatTime(pbRecord.personalBest)}</div>
-                              <div className="text-xs text-blue-700">{formatDate(pbRecord.lastUpdated)}</div>
-                            </div>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  </div>
+                    return (
+                      <div key={routine.id}>
+                        <div className="mb-3 flex items-center gap-2">
+                          <span className="text-2xl">{routine.icon}</span>
+                          <h3 className="text-xl font-bold text-gray-700">{routine.name}</h3>
+                        </div>
+                        <div className="space-y-2">
+                          {routineTasks.map((task: { id: string; name: string; icon: string }) => {
+                            const pbRecord = data.personalRecords.find(
+                              (r: { kidId: string; taskId: string }) => r.kidId === kid.id && r.taskId === task.id
+                            );
+                            const wr = getWorldRecord(data, task.id);
+                            const isWorldRecord = wr && wr.kidId === kid.id;
 
-                  {/* Evening Personal Bests */}
-                  <div>
-                    <h3 className="mb-4 text-xl font-bold text-gray-700">Evening Routine</h3>
-                    <div className="space-y-2">
-                      {eveningTasks.map((task: { id: string; name: string; icon: string }) => {
-                        const pbRecord = data.personalRecords.find(
-                          (r: { kidId: string; taskId: string }) => r.kidId === kid.id && r.taskId === task.id
-                        );
-                        const wr = getWorldRecord(data, task.id);
-                        const isWorldRecord = wr && wr.kidId === kid.id;
+                            if (!pbRecord) return null;
 
-                        if (!pbRecord) return null;
-
-                        return (
-                          <div
-                            key={task.id}
-                            className={`flex items-center justify-between rounded-xl p-3 ${
-                              isWorldRecord ? 'bg-yellow-100 border-2 border-yellow-400' : 'bg-purple-50'
-                            }`}
-                          >
-                            <div className="flex items-center gap-2">
-                              <span className="text-2xl">{task.icon}</span>
-                              <span className="font-semibold text-gray-900">{task.name}</span>
-                              {isWorldRecord && <span className="text-xl">🥇</span>}
-                            </div>
-                            <div className="text-right">
-                              <div className="text-xl font-bold text-purple-900">{formatTime(pbRecord.personalBest)}</div>
-                              <div className="text-xs text-purple-700">{formatDate(pbRecord.lastUpdated)}</div>
-                            </div>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  </div>
+                            return (
+                              <div
+                                key={task.id}
+                                className={`flex items-center justify-between rounded-xl p-3 ${
+                                  isWorldRecord ? 'bg-yellow-100 border-2 border-yellow-400' : 'bg-blue-50'
+                                }`}
+                              >
+                                <div className="flex items-center gap-2">
+                                  <span className="text-xl">{task.icon}</span>
+                                  <span className="text-sm font-semibold text-gray-900">{task.name}</span>
+                                  {isWorldRecord && <span className="text-lg">🥇</span>}
+                                </div>
+                                <div className="text-right">
+                                  <div className="text-lg font-bold text-blue-900">{formatTime(pbRecord.personalBest)}</div>
+                                  <div className="text-xs text-blue-700">{formatDate(pbRecord.lastUpdated)}</div>
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    );
+                  })}
                 </div>
               </div>
             );

@@ -1,4 +1,12 @@
-export type RoutineType = 'morning' | 'evening';
+export type RoutineType = 'morning' | 'evening' | string;
+
+export interface Routine {
+  id: string;
+  name: string;
+  icon: string;
+  color: string; // gradient or solid color for the routine card
+  isDefault: boolean; // true for morning/evening, false for custom
+}
 
 export interface Kid {
   id: string;
@@ -11,7 +19,7 @@ export interface Task {
   id: string;
   name: string;
   icon: string;
-  routineType: RoutineType;
+  routineId: string; // Changed from routineType to routineId
   order: number;
 }
 
@@ -45,7 +53,9 @@ export interface ActiveTimer {
 }
 
 export interface AppData {
+  version: number; // Data structure version
   kids: Kid[];
+  routines: Routine[];
   tasks: Task[];
   completions: TaskCompletion[];
   personalRecords: TaskRecord[];

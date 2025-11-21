@@ -4,6 +4,7 @@ import { use, useEffect, useState } from 'react';
 import { useLocalStorage } from '@/hooks/useLocalStorage';
 import { Celebration } from '@/components/Celebration';
 import { MultiplayerTaskItem } from '@/components/MultiplayerTaskItem';
+import { WakeLockToggle } from '@/components/WakeLockToggle';
 import {
   addCompletion,
   startTimer,
@@ -17,7 +18,7 @@ import { ArrowLeft, Trophy, RotateCcw } from 'lucide-react';
 import Link from 'next/link';
 
 interface PageProps {
-  params: Promise<{ type: RoutineType }>;
+  params: Promise<{ type: string }>;
 }
 
 interface KidProgress {
@@ -27,7 +28,7 @@ interface KidProgress {
 }
 
 export default function MultiplayerPage({ params }: PageProps) {
-  const { type } = use(params);
+  const { type: routineId } = use(params);
   const { data, updateData, isLoading } = useLocalStorage();
   const [kidProgress, setKidProgress] = useState<Map<string, KidProgress>>(new Map());
   const [showCelebration, setShowCelebration] = useState(false);
@@ -41,7 +42,7 @@ export default function MultiplayerPage({ params }: PageProps) {
       data.kids.forEach((kid: Kid) => {
         const todayCompletions = getTodayCompletions(data, kid.id);
         const completed = new Set(todayCompletions.map((c) => c.taskId));
-        const tasks = data.tasks.filter((t: Task) => t.routineType === type).sort((a: Task, b: Task) => a.order - b.order);
+        const tasks = data.tasks.filter((t: Task) => t.routineId === routineId).sort((a: Task, b: Task) => a.order - b.order);
         const currentIndex = tasks.findIndex((t: Task) => !completed.has(t.id));
 
         progressMap.set(kid.id, {
@@ -53,7 +54,43 @@ export default function MultiplayerPage({ params }: PageProps) {
 
       setKidProgress(progressMap);
     }
-  }, [data, type]);
+  }, [data, routineId]);
+
+  // Check for winner and celebrations when progress changes
+  useEffect(() => {
+    if (!data || kidProgress.size === 0) return;
+
+    const tasks = data.tasks
+      .filter((t: Task) => t.routineId === routineId)
+      .sort((a: Task, b: Task) => a.order - b.order);
+
+    // Check if any kid just finished first
+    const completedKids = Array.from(kidProgress.values())
+      .filter((p) => p.completedTaskIds.size === tasks.length);
+
+    if (completedKids.length === 1 && !winner) {
+      const kid = data.kids.find((k: Kid) => k.id === completedKids[0].kidId);
+      setWinner(kid || null);
+      setShowCelebration(true);
+      setTimeout(() => {
+        setShowCelebration(false);
+      }, 3000);
+    }
+
+    // Check if everyone is finished
+    const everyoneFinished = Array.from(kidProgress.values()).every(
+      (p) => p.completedTaskIds.size === tasks.length
+    );
+    if (everyoneFinished && kidProgress.size > 0 && !allFinished) {
+      setAllFinished(true);
+      setTimeout(() => {
+        setShowCelebration(true);
+        setTimeout(() => {
+          setShowCelebration(false);
+        }, 4000);
+      }, 3500);
+    }
+  }, [kidProgress, data, routineId, winner, allFinished]);
 
   if (isLoading || !data) {
     return (
@@ -64,9 +101,18 @@ export default function MultiplayerPage({ params }: PageProps) {
   }
 
   const kids = data.kids;
+  const routine = data.routines.find((r) => r.id === routineId);
   const tasks = data.tasks
-    .filter((t: Task) => t.routineType === type)
+    .filter((t: Task) => t.routineId === routineId)
     .sort((a: Task, b: Task) => a.order - b.order);
+
+  if (!routine) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-blue-400 to-purple-500">
+        <div className="text-2xl text-white">Routine not found</div>
+      </div>
+    );
+  }
 
   const handleToggleTask = async (kidId: string, taskId: string) => {
     const progress = kidProgress.get(kidId);
@@ -98,56 +144,31 @@ export default function MultiplayerPage({ params }: PageProps) {
         } else {
           updateData(newData);
         }
+      } else {
+        // No timer running - save completion with 0 seconds
+        const completion = {
+          kidId,
+          taskId,
+          date: new Date().toISOString().split('T')[0],
+          timeInSeconds: 0,
+          completedAt: new Date().toISOString(),
+        };
+
+        const updatedData = addCompletion(data, completion);
+        updateData(updatedData);
       }
-
-      // Update local progress
-      const newCompleted = new Set([...progress.completedTaskIds, taskId]);
-      const newIndex = tasks.findIndex((t: Task) => !newCompleted.has(t.id));
-
-      const newProgress = new Map(kidProgress);
-      newProgress.set(kidId, {
-        ...progress,
-        completedTaskIds: newCompleted,
-        currentTaskIndex: newIndex === -1 ? tasks.length : newIndex,
-      });
-      setKidProgress(newProgress);
-
-      // Check if this kid finished first
-      if (newCompleted.size === tasks.length && !winner) {
-        const kid = kids.find((k: Kid) => k.id === kidId);
-        setWinner(kid || null);
-        setShowCelebration(true);
-        setTimeout(() => {
-          setShowCelebration(false);
-        }, 3000);
-      }
-
-      // Check if everyone is finished
-      const everyoneFinished = Array.from(newProgress.values()).every(
-        (p) => p.completedTaskIds.size === tasks.length
-      );
-      if (everyoneFinished && !allFinished) {
-        setAllFinished(true);
-        setTimeout(() => {
-          setShowCelebration(true);
-          setTimeout(() => {
-            setShowCelebration(false);
-          }, 4000);
-        }, 3500);
-      }
+      // Note: Don't manually update kidProgress here - let useEffect handle it from storage
     } else {
-      // Uncomplete
-      const newCompleted = new Set(progress.completedTaskIds);
-      newCompleted.delete(taskId);
-      const newIndex = tasks.findIndex((t: Task) => !newCompleted.has(t.id));
-
-      const newProgress = new Map(kidProgress);
-      newProgress.set(kidId, {
-        ...progress,
-        completedTaskIds: newCompleted,
-        currentTaskIndex: newIndex === -1 ? tasks.length : newIndex,
-      });
-      setKidProgress(newProgress);
+      // Uncomplete - remove completion from storage
+      const today = new Date().toISOString().split('T')[0];
+      const updatedData = {
+        ...data,
+        completions: data.completions.filter(
+          (c) => !(c.kidId === kidId && c.taskId === taskId && c.date === today)
+        ),
+      };
+      updateData(updatedData);
+      // Note: Don't manually update kidProgress here - let useEffect handle it from storage
     }
   };
 
@@ -225,19 +246,22 @@ export default function MultiplayerPage({ params }: PageProps) {
               <ArrowLeft className="h-8 w-8 text-gray-800" />
             </Link>
             <h1 className="text-5xl font-black text-white drop-shadow-lg">
-              {type === 'morning' ? 'Morning' : 'Evening'} Routine - Race Mode!
+              {routine.name} Routine - Race Mode!
             </h1>
           </div>
 
-          {hasAnyProgress && (
-            <button
-              onClick={handleReset}
-              className="flex items-center gap-2 rounded-full bg-white px-6 py-3 text-lg font-bold text-red-600 shadow-lg transition-transform hover:scale-105 active:scale-95 hover:bg-red-50"
-            >
-              <RotateCcw className="h-6 w-6" />
-              Reset All
-            </button>
-          )}
+          <div className="flex items-center gap-3">
+            <WakeLockToggle />
+            {hasAnyProgress && (
+              <button
+                onClick={handleReset}
+                className="flex items-center gap-2 rounded-full bg-white px-6 py-3 text-lg font-bold text-red-600 shadow-lg transition-transform hover:scale-105 active:scale-95 hover:bg-red-50"
+              >
+                <RotateCcw className="h-6 w-6" />
+                Reset All
+              </button>
+            )}
+          </div>
         </div>
 
         {/* Kid Lanes */}

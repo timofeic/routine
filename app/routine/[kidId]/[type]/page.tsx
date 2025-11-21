@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useLocalStorage } from '@/hooks/useLocalStorage';
 import { TaskCard } from '@/components/TaskCard';
 import { Celebration } from '@/components/Celebration';
+import { WakeLockToggle } from '@/components/WakeLockToggle';
 import {
   addCompletion,
   startTimer,
@@ -19,11 +20,11 @@ import { ArrowLeft, RotateCcw } from 'lucide-react';
 import Link from 'next/link';
 
 interface PageProps {
-  params: Promise<{ kidId: string; type: RoutineType }>;
+  params: Promise<{ kidId: string; type: string }>;
 }
 
 export default function RoutinePage({ params }: PageProps) {
-  const { kidId, type } = use(params);
+  const { kidId, type: routineId } = use(params);
   const { data, updateData, isLoading } = useLocalStorage();
   const router = useRouter();
   const [completedTaskIds, setCompletedTaskIds] = useState<Set<string>>(new Set());
@@ -42,6 +43,37 @@ export default function RoutinePage({ params }: PageProps) {
     }
   }, [data, kidId]);
 
+  // Check for completion celebration when tasks change
+  useEffect(() => {
+    if (!data || completedTaskIds.size === 0) return;
+
+    const tasks = data.tasks
+      .filter((t: Task) => t.routineId === routineId)
+      .sort((a: Task, b: Task) => a.order - b.order);
+
+    // Check if all tasks are completed
+    const allCompleted = tasks.length > 0 && tasks.every((t: { id: string }) => completedTaskIds.has(t.id));
+
+    if (allCompleted) {
+      // Calculate total time
+      const todayCompletions = getTodayCompletions(data, kidId).filter((c: { taskId: string }) =>
+        tasks.some((t: { id: string }) => t.id === c.taskId)
+      );
+      const totalTime = todayCompletions.reduce((sum: number, c: { timeInSeconds: number }) => sum + c.timeInSeconds, 0);
+
+      setCelebrationData({
+        isNewPB: false,
+        isNewWR: false,
+        totalTime,
+      });
+      setShowCelebration(true);
+
+      setTimeout(() => {
+        setShowCelebration(false);
+      }, 4000);
+    }
+  }, [completedTaskIds, data, kidId, routineId]);
+
   if (isLoading || !data) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-blue-400 to-purple-500">
@@ -51,14 +83,15 @@ export default function RoutinePage({ params }: PageProps) {
   }
 
   const kid = data.kids.find((k: Kid) => k.id === kidId);
+  const routine = data.routines.find((r) => r.id === routineId);
   const tasks = data.tasks
-    .filter((t: Task) => t.routineType === type)
+    .filter((t: Task) => t.routineId === routineId)
     .sort((a: Task, b: Task) => a.order - b.order);
 
-  if (!kid) {
+  if (!kid || !routine) {
     return (
-      <div className="flex min-h-screen items-center justify-center">
-        <div className="text-2xl">Kid not found</div>
+      <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-blue-400 to-purple-500">
+        <div className="text-2xl text-white">{!kid ? 'Kid not found' : 'Routine not found'}</div>
       </div>
     );
   }
@@ -87,44 +120,34 @@ export default function RoutinePage({ params }: PageProps) {
 
           const updatedData = addCompletion(newData, completion);
           updateData(updatedData);
-
-          setCompletedTaskIds(new Set([...completedTaskIds, taskId]));
         } else {
           updateData(newData);
         }
       } else {
-        // Complete without timer
-        setCompletedTaskIds(new Set([...completedTaskIds, taskId]));
+        // No timer running - save completion with 0 seconds
+        const completion = {
+          kidId,
+          taskId,
+          date: new Date().toISOString().split('T')[0],
+          timeInSeconds: 0,
+          completedAt: new Date().toISOString(),
+        };
+
+        const updatedData = addCompletion(data, completion);
+        updateData(updatedData);
       }
+      // Note: Don't manually update completedTaskIds here - let useEffect handle it from storage
     } else {
-      // Uncomplete
-      const newCompleted = new Set(completedTaskIds);
-      newCompleted.delete(taskId);
-      setCompletedTaskIds(newCompleted);
-    }
-
-    // Check if all tasks are now completed
-    const allCompleted = tasks.every(
-      (t: { id: string }) => completedTaskIds.has(t.id) || (t.id === taskId && !isCurrentlyCompleted)
-    );
-
-    if (allCompleted) {
-      // Calculate total time
-      const todayCompletions = getTodayCompletions(data, kidId).filter((c: { taskId: string }) =>
-        tasks.some((t: { id: string }) => t.id === c.taskId)
-      );
-      const totalTime = todayCompletions.reduce((sum: number, c: { timeInSeconds: number }) => sum + c.timeInSeconds, 0);
-
-      setCelebrationData({
-        isNewPB: false,
-        isNewWR: false,
-        totalTime,
-      });
-      setShowCelebration(true);
-
-      setTimeout(() => {
-        setShowCelebration(false);
-      }, 4000);
+      // Uncomplete - remove completion from storage
+      const today = new Date().toISOString().split('T')[0];
+      const updatedData = {
+        ...data,
+        completions: data.completions.filter(
+          (c) => !(c.kidId === kidId && c.taskId === taskId && c.date === today)
+        ),
+      };
+      updateData(updatedData);
+      // Note: Don't manually update completedTaskIds here - let useEffect handle it from storage
     }
   };
 
@@ -194,33 +217,38 @@ export default function RoutinePage({ params }: PageProps) {
     <div className="min-h-screen bg-gradient-to-br from-blue-400 via-purple-400 to-pink-400 p-8">
       <div className="mx-auto max-w-4xl">
         {/* Header */}
-        <div className="mb-8 flex items-center justify-between">
-          <div className="flex items-center gap-4">
-            <Link
-              href="/"
-              className="rounded-full bg-white p-4 shadow-lg transition-transform hover:scale-105 active:scale-95"
-            >
-              <ArrowLeft className="h-8 w-8 text-gray-800" />
-            </Link>
-            <div>
-              <div className="flex items-center gap-3">
-                <span className="text-6xl">{kid.avatar}</span>
-                <h1 className="text-5xl font-black text-white drop-shadow-lg">
-                  {kid.name}&apos;s {type === 'morning' ? 'Morning' : 'Evening'} Routine
-                </h1>
+        <div className="mb-8 flex flex-col gap-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-4">
+              <Link
+                href="/"
+                className="rounded-full bg-white p-4 shadow-lg transition-transform hover:scale-105 active:scale-95"
+              >
+                <ArrowLeft className="h-8 w-8 text-gray-800" />
+              </Link>
+              <div>
+                <div className="flex items-center gap-3">
+                  <span className="text-6xl">{kid.avatar}</span>
+                  <h1 className="text-5xl font-black text-white drop-shadow-lg">
+                    {kid.name}&apos;s {routine.name} Routine
+                  </h1>
+                </div>
               </div>
             </div>
-          </div>
 
-          {completedTaskIds.size > 0 && (
-            <button
-              onClick={handleReset}
-              className="flex items-center gap-2 rounded-full bg-white px-6 py-3 text-lg font-bold text-red-600 shadow-lg transition-transform hover:scale-105 active:scale-95 hover:bg-red-50"
-            >
-              <RotateCcw className="h-6 w-6" />
-              Reset
-            </button>
-          )}
+            <div className="flex items-center gap-3">
+              <WakeLockToggle />
+              {completedTaskIds.size > 0 && (
+                <button
+                  onClick={handleReset}
+                  className="flex items-center gap-2 rounded-full bg-white px-6 py-3 text-lg font-bold text-red-600 shadow-lg transition-transform hover:scale-105 active:scale-95 hover:bg-red-50"
+                >
+                  <RotateCcw className="h-6 w-6" />
+                  Reset
+                </button>
+              )}
+            </div>
+          </div>
         </div>
 
         {/* Progress Bar */}

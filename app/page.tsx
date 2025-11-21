@@ -44,32 +44,27 @@ export default function Home() {
         </div>
 
         {/* Routine Type Selection */}
-        <div className="mb-12 grid grid-cols-2 gap-6">
-          <Link
-            href="/multiplayer/morning"
-            className="group relative overflow-hidden rounded-3xl bg-gradient-to-br from-yellow-300 to-orange-400 p-12 shadow-2xl transition-all hover:scale-105 active:scale-95"
-          >
-            <div className="flex flex-col items-center gap-6">
-              <Sun className="h-32 w-32 text-white drop-shadow-lg" strokeWidth={2.5} />
-              <h2 className="text-5xl font-black text-white drop-shadow-lg">
-                Morning Routine
-              </h2>
-              <p className="text-2xl text-white/90">Everyone Together!</p>
-            </div>
-          </Link>
-
-          <Link
-            href="/multiplayer/evening"
-            className="group relative overflow-hidden rounded-3xl bg-gradient-to-br from-indigo-500 to-purple-600 p-12 shadow-2xl transition-all hover:scale-105 active:scale-95"
-          >
-            <div className="flex flex-col items-center gap-6">
-              <Moon className="h-32 w-32 text-white drop-shadow-lg" strokeWidth={2.5} />
-              <h2 className="text-5xl font-black text-white drop-shadow-lg">
-                Evening Routine
-              </h2>
-              <p className="text-2xl text-white/90">Everyone Together!</p>
-            </div>
-          </Link>
+        <div className="mb-12">
+          <h2 className="mb-6 text-4xl font-black text-white drop-shadow-lg">
+            Choose a Routine:
+          </h2>
+          <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
+            {data.routines.map((routine) => (
+              <Link
+                key={routine.id}
+                href={`/multiplayer/${routine.id}`}
+                className={`group relative overflow-hidden rounded-3xl bg-gradient-to-br ${routine.color} p-12 shadow-2xl transition-all hover:scale-105 active:scale-95`}
+              >
+                <div className="flex flex-col items-center gap-4">
+                  <span className="text-7xl drop-shadow-lg">{routine.icon}</span>
+                  <h2 className="text-4xl font-black text-white drop-shadow-lg text-center">
+                    {routine.name}
+                  </h2>
+                  <p className="text-xl text-white/90">Everyone Together!</p>
+                </div>
+              </Link>
+            ))}
+          </div>
         </div>
 
         {/* Individual Kids Section */}
@@ -85,20 +80,16 @@ export default function Home() {
                   <h3 className="mb-4 text-3xl font-bold text-gray-900">{kid.name}</h3>
 
                   <div className="flex flex-col gap-3">
-                    <Link
-                      href={`/routine/${kid.id}/morning`}
-                      className="flex items-center justify-center gap-2 rounded-full bg-gradient-to-r from-yellow-400 to-orange-400 px-6 py-4 text-xl font-bold text-white shadow-md transition-transform hover:scale-105 active:scale-95"
-                    >
-                      <Sun className="h-6 w-6" />
-                      Morning
-                    </Link>
-                    <Link
-                      href={`/routine/${kid.id}/evening`}
-                      className="flex items-center justify-center gap-2 rounded-full bg-gradient-to-r from-indigo-500 to-purple-600 px-6 py-4 text-xl font-bold text-white shadow-md transition-transform hover:scale-105 active:scale-95"
-                    >
-                      <Moon className="h-6 w-6" />
-                      Evening
-                    </Link>
+                    {data.routines.map((routine) => (
+                      <Link
+                        key={routine.id}
+                        href={`/routine/${kid.id}/${routine.id}`}
+                        className={`flex items-center justify-center gap-2 rounded-full bg-gradient-to-r ${routine.color} px-6 py-3 text-lg font-bold text-white shadow-md transition-transform hover:scale-105 active:scale-95`}
+                      >
+                        <span className="text-xl">{routine.icon}</span>
+                        {routine.name}
+                      </Link>
+                    ))}
                   </div>
                 </div>
               </div>

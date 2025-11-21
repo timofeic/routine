@@ -1,34 +1,42 @@
-import type { AppData, Kid, Task, TaskCompletion, TaskRecord, WorldRecord, ActiveTimer } from './types';
+import type { AppData, Kid, Task, Routine, TaskCompletion, TaskRecord, WorldRecord, ActiveTimer } from './types';
 
 export type { AppData };
 
 const STORAGE_KEY = 'kids-routine-app-data';
+const DATA_VERSION = 1; // Increment this when you make breaking changes
 
 const DEFAULT_KIDS: Kid[] = [
   { id: '1', name: 'Child 1', color: 'bg-blue-500', avatar: '👦' },
   { id: '2', name: 'Child 2', color: 'bg-pink-500', avatar: '👧' },
 ];
 
+const DEFAULT_ROUTINES: Routine[] = [
+  { id: 'morning', name: 'Morning', icon: '☀️', color: 'from-yellow-300 to-orange-400', isDefault: true },
+  { id: 'evening', name: 'Evening', icon: '🌙', color: 'from-indigo-500 to-purple-600', isDefault: true },
+];
+
 const DEFAULT_TASKS: Task[] = [
   // Morning tasks
-  { id: 'm1', name: 'Go to the toilet', icon: '🚽', routineType: 'morning', order: 1 },
-  { id: 'm2', name: 'Get changed', icon: '👕', routineType: 'morning', order: 2 },
-  { id: 'm3', name: 'Pack bag for school', icon: '🎒', routineType: 'morning', order: 3 },
-  { id: 'm4', name: 'Eat breakfast', icon: '🍳', routineType: 'morning', order: 4 },
-  { id: 'm5', name: 'Brush teeth', icon: '🪥', routineType: 'morning', order: 5 },
-  { id: 'm6', name: 'Say bye to Mum', icon: '👋', routineType: 'morning', order: 6 },
+  { id: 'm1', name: 'Go to the toilet', icon: '🚽', routineId: 'morning', order: 1 },
+  { id: 'm2', name: 'Get changed', icon: '👕', routineId: 'morning', order: 2 },
+  { id: 'm3', name: 'Pack bag for school', icon: '🎒', routineId: 'morning', order: 3 },
+  { id: 'm4', name: 'Eat breakfast', icon: '🍳', routineId: 'morning', order: 4 },
+  { id: 'm5', name: 'Brush teeth', icon: '🪥', routineId: 'morning', order: 5 },
+  { id: 'm6', name: 'Say bye to Mum', icon: '👋', routineId: 'morning', order: 6 },
   // Evening tasks
-  { id: 'e1', name: 'Clean up the table', icon: '🧹', routineType: 'evening', order: 1 },
-  { id: 'e2', name: 'Tidy toys', icon: '🧸', routineType: 'evening', order: 2 },
-  { id: 'e3', name: 'Take a bath', icon: '🛁', routineType: 'evening', order: 3 },
-  { id: 'e4', name: 'Brush teeth', icon: '🪥', routineType: 'evening', order: 4 },
-  { id: 'e5', name: 'Get changed', icon: '🌙', routineType: 'evening', order: 5 },
-  { id: 'e6', name: 'Read bedtime story', icon: '📖', routineType: 'evening', order: 6 },
+  { id: 'e1', name: 'Clean up the table', icon: '🧹', routineId: 'evening', order: 1 },
+  { id: 'e2', name: 'Tidy toys', icon: '🧸', routineId: 'evening', order: 2 },
+  { id: 'e3', name: 'Take a bath', icon: '🛁', routineId: 'evening', order: 3 },
+  { id: 'e4', name: 'Brush teeth', icon: '🪥', routineId: 'evening', order: 4 },
+  { id: 'e5', name: 'Get changed', icon: '🌙', routineId: 'evening', order: 5 },
+  { id: 'e6', name: 'Read bedtime story', icon: '📖', routineId: 'evening', order: 6 },
 ];
 
 function getDefaultData(): AppData {
   return {
+    version: DATA_VERSION,
     kids: DEFAULT_KIDS,
+    routines: DEFAULT_ROUTINES,
     tasks: DEFAULT_TASKS,
     completions: [],
     personalRecords: [],
@@ -49,7 +57,30 @@ export function loadData(): AppData {
       saveData(defaultData);
       return defaultData;
     }
-    return JSON.parse(stored);
+    const data = JSON.parse(stored);
+
+    // Check version - if outdated, reset to defaults
+    if (!data.version || data.version < DATA_VERSION) {
+      console.log(`Data version outdated (${data.version || 0} < ${DATA_VERSION}). Resetting to defaults.`);
+      const defaultData = getDefaultData();
+      saveData(defaultData);
+      return defaultData;
+    }
+
+    // Migration: Add routines if missing
+    if (!data.routines) {
+      data.routines = DEFAULT_ROUTINES;
+      // Migrate old tasks to use routineId
+      if (data.tasks) {
+        data.tasks = data.tasks.map((task: any) => ({
+          ...task,
+          routineId: task.routineType || task.routineId,
+        }));
+      }
+      saveData(data);
+    }
+
+    return data;
   } catch (error) {
     console.error('Error loading data:', error);
     return getDefaultData();
@@ -87,6 +118,44 @@ export function deleteKid(data: AppData, kidId: string): AppData {
     completions: data.completions.filter(c => c.kidId !== kidId),
     personalRecords: data.personalRecords.filter(r => r.kidId !== kidId),
     activeTimers: data.activeTimers.filter(t => t.kidId !== kidId),
+  };
+}
+
+export function addRoutine(data: AppData, routine: Routine): AppData {
+  return {
+    ...data,
+    routines: [...data.routines, routine],
+  };
+}
+
+export function updateRoutine(data: AppData, routineId: string, updates: Partial<Routine>): AppData {
+  return {
+    ...data,
+    routines: data.routines.map(r => r.id === routineId ? { ...r, ...updates } : r),
+  };
+}
+
+export function deleteRoutine(data: AppData, routineId: string): AppData {
+  return {
+    ...data,
+    routines: data.routines.filter(r => r.id !== routineId),
+    tasks: data.tasks.filter(t => t.routineId !== routineId),
+    completions: data.completions.filter(c => {
+      const task = data.tasks.find(t => t.id === c.taskId);
+      return task && task.routineId !== routineId;
+    }),
+    personalRecords: data.personalRecords.filter(r => {
+      const task = data.tasks.find(t => t.id === r.taskId);
+      return task && task.routineId !== routineId;
+    }),
+    worldRecords: data.worldRecords.filter(r => {
+      const task = data.tasks.find(t => t.id === r.taskId);
+      return task && task.routineId !== routineId;
+    }),
+    activeTimers: data.activeTimers.filter(t => {
+      const task = data.tasks.find(ta => ta.id === t.taskId);
+      return task && task.routineId !== routineId;
+    }),
   };
 }
 
@@ -220,9 +289,9 @@ export function getTodayCompletions(data: AppData, kidId: string): TaskCompletio
   );
 }
 
-export function reorderTasks(data: AppData, routineType: 'morning' | 'evening', taskIds: string[]): AppData {
+export function reorderTasks(data: AppData, routineId: string, taskIds: string[]): AppData {
   const updatedTasks = data.tasks.map(task => {
-    if (task.routineType === routineType) {
+    if (task.routineId === routineId) {
       const newOrder = taskIds.indexOf(task.id);
       return newOrder >= 0 ? { ...task, order: newOrder + 1 } : task;
     }

@@ -14,11 +14,19 @@ https://routine-bice.vercel.app/
 - **Progress Tracking**: Visual progress bars show completion status
 - **Celebration Animations**: Confetti and encouraging messages when tasks are completed
 
+### 🎯 Custom Routines
+- **Create Your Own**: Add custom routines beyond morning and evening
+- **Examples**: Homework routine, weekend chores, bedtime preparation, sports day prep
+- **Flexible**: Each routine can have its own tasks and schedule
+- **Colorful**: Choose from multiple gradient color themes
+- **Icon Support**: Select from 100+ emojis for visual identification
+
 ### 👥 Multiplayer Mode
 - **Race Mode**: All kids complete their routines simultaneously
 - **Split-Screen Layout**: Each child has their own swimlane with tasks
 - **Real-Time Progress**: See who's ahead and encourage teamwork
 - **Group Celebrations**: Special celebrations when everyone finishes
+- **Works with All Routines**: Race mode works with custom routines too
 
 ### 🏆 Gamification
 - **Personal Bests**: Track each child's best time for every task
@@ -28,18 +36,21 @@ https://routine-bice.vercel.app/
 
 ### ⚙️ Customization
 - **Manage Kids**: Add, edit, or remove child profiles with custom avatars
+- **Create Routines**: Add custom routines with names, icons, and color themes
 - **Customize Tasks**: Add, edit, reorder, or remove tasks for each routine
-- **Flexible Routines**: Different kids can have different routines
+- **Emoji Picker**: Visual selector with 100+ emojis for avatars and icons
+- **Flexible System**: Different kids can have different routines
 
 ### 📱 iPad Optimized
 - Large touch targets for easy interaction
 - Bright, colorful interface
 - Responsive design for various screen sizes
 - No text selection for smoother touch experience
+- **Keep Awake Mode**: Toggle to prevent screen from sleeping during routines
 
-## Default Tasks
+## Default Routines & Tasks
 
-### Morning Routine
+### Morning Routine ☀️
 1. 🚽 Go to the toilet
 2. 👕 Get changed
 3. 🎒 Pack bag for school
@@ -47,13 +58,21 @@ https://routine-bice.vercel.app/
 5. 🪥 Brush teeth
 6. 👋 Say bye to Mum
 
-### Evening Routine
+### Evening Routine 🌙
 1. 🧹 Clean up the table after dinner
 2. 🧸 Tidy toys in room and living room
 3. 🛁 Take a bath/shower
 4. 🪥 Brush teeth
 5. 🌙 Get changed
 6. 📖 Read bedtime story
+
+### Custom Routines
+You can create additional routines in Settings, such as:
+- 📚 Homework Routine
+- 🏃 Sports Day Prep
+- 🎮 Weekend Chores
+- 🎂 Party Preparation
+- 🧳 Packing for Trip
 
 ## Getting Started
 
@@ -127,7 +146,8 @@ This app is a **Progressive Web App** that can be installed on your iPad home sc
 
 All data is stored locally in the browser's localStorage, including:
 - Kid profiles (names, avatars, colors)
-- Task configurations
+- Custom routines (names, icons, colors)
+- Task configurations (linked to specific routines)
 - Completion records
 - Personal bests and world records
 - Active timers
@@ -143,18 +163,21 @@ This means:
 
 ### For Parents
 1. **Initial Setup**: Go to Settings to customize kids' names and avatars
-2. **Customize Tasks**: Add or remove tasks based on your family's routine
-3. **View Progress**: Check the Records page to see improvements over time
-4. **Reset Records**: You can reset by clearing browser data if needed
+2. **Create Routines**: Add custom routines for different situations (homework, sports, weekends)
+3. **Customize Tasks**: Add or remove tasks based on your family's routine
+4. **Switch Routines**: Select different routine tabs in the Tasks section to manage each one
+5. **View Progress**: Check the Records page to see improvements over time
+6. **Reset if Needed**: Use the Reset button on routine pages or clear browser data
 
 ### For Kids
 1. **Choose Your Mode**:
    - Select "Everyone Together!" for multiplayer race mode
    - Or choose your individual profile for solo practice
-2. **Start Tasks**: Tap the checkbox to mark tasks complete
-3. **Use Timers**: Press "Start Timer" before beginning a task
-4. **Beat Records**: Try to complete tasks faster each time!
-5. **Celebrate**: Watch the confetti when you finish!
+2. **Keep Screen Awake**: Tap the "Keep Awake" button so the screen doesn't turn off
+3. **Start Tasks**: Tap the checkbox to mark tasks complete
+4. **Use Timers**: Press "Start Timer" before beginning a task
+5. **Beat Records**: Try to complete tasks faster each time!
+6. **Celebrate**: Watch the confetti when you finish!
 
 ## App Structure
 
@@ -187,10 +210,16 @@ hooks/
 ## Customization Ideas
 
 - Change emoji avatars for kids
+- Create custom routines for specific situations:
+  - 📚 Homework routine (after school activities)
+  - 🏃 Sports practice prep
+  - 🎮 Screen time checklist
+  - 🧹 Deep cleaning Saturday
+  - 🎂 Birthday party prep
+  - 🚗 Road trip packing
 - Add new tasks specific to your family
-- Modify the color scheme
-- Add photos instead of emojis
-- Create seasonal routines (school vs. vacation)
+- Reorder tasks to match your preferences
+- Track different routines for weekdays vs. weekends
 
 ## Browser Compatibility
 
