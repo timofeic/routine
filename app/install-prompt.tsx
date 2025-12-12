@@ -12,10 +12,12 @@ interface BeforeInstallPromptEvent extends Event {
   prompt(): Promise<void>
 }
 
+type PlatformType = 'ios-safari' | 'ios-other' | 'android-or-desktop' | null
+
 export function InstallPrompt() {
   const [deferredPrompt, setDeferredPrompt] = useState<BeforeInstallPromptEvent | null>(null)
   const [showInstallPrompt, setShowInstallPrompt] = useState(false)
-  const [isIOS, setIsIOS] = useState(false)
+  const [platform, setPlatform] = useState<PlatformType>(null)
   const [mounted, setMounted] = useState(false)
 
   const DISMISS_STORAGE_KEY = 'install_prompt_dismissed_at'
@@ -23,12 +25,20 @@ export function InstallPrompt() {
 
   useEffect(() => {
     setMounted(true)
-    
+
     try {
       const ua = navigator.userAgent
-      const isiOSDevice = /iPad|iPhone|iPod/.test(ua) || 
+      const isiOSDevice = /iPad|iPhone|iPod/.test(ua) ||
         (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1)
-      setIsIOS(isiOSDevice)
+
+      // Detect if Safari on iOS (not Chrome, Firefox, Edge, etc.)
+      const isSafariBrowser = /Safari/.test(ua) && !/CriOS|FxiOS|OPiOS|EdgiOS|Chrome|Firefox/.test(ua)
+
+      if (isiOSDevice) {
+        setPlatform(isSafariBrowser ? 'ios-safari' : 'ios-other')
+      } else {
+        setPlatform('android-or-desktop')
+      }
 
       // Check if app is already installed
       if (window.matchMedia('(display-mode: standalone)').matches) {
@@ -53,6 +63,7 @@ export function InstallPrompt() {
       // Show install prompt for iOS users immediately
       if (isiOSDevice) {
         setShowInstallPrompt(true)
+        return // No beforeinstallprompt on iOS
       }
 
       // Listen for the beforeinstallprompt event (Android/Desktop only)
@@ -95,9 +106,12 @@ export function InstallPrompt() {
 
   // Don't render anything until mounted (prevents hydration issues)
   if (!mounted) return null
-  
+
   // Don't show if not needed
   if (!showInstallPrompt) return null
+
+  const isIOS = platform === 'ios-safari' || platform === 'ios-other'
+  const isChromeiOS = platform === 'ios-other'
 
   return (
     <div className="fixed bottom-4 right-4 z-50 max-w-sm animate-bounce-in">
@@ -109,10 +123,10 @@ export function InstallPrompt() {
             </div>
             <div>
               <h3 className="font-bold text-gray-900 text-sm">
-                {isIOS ? 'Add to Home Screen' : 'Install App'}
+                Add to Home Screen
               </h3>
               <p className="text-xs text-gray-500">
-                {isIOS ? 'For quick access' : 'Add to your device'}
+                For quick access
               </p>
             </div>
           </div>
@@ -126,18 +140,37 @@ export function InstallPrompt() {
 
         {isIOS ? (
           <div className="space-y-2">
-            <div className="flex items-start gap-2 text-sm">
-              <span className="flex-shrink-0 w-5 h-5 bg-purple-600 text-white rounded-full flex items-center justify-center text-xs font-bold">
-                1
-              </span>
-              <span className="text-gray-600">Tap the Share button <span className="inline-block">⬆️</span></span>
-            </div>
-            <div className="flex items-start gap-2 text-sm">
-              <span className="flex-shrink-0 w-5 h-5 bg-purple-600 text-white rounded-full flex items-center justify-center text-xs font-bold">
-                2
-              </span>
-              <span className="text-gray-600">Tap &quot;Add to Home Screen&quot;</span>
-            </div>
+            {isChromeiOS ? (
+              <>
+                <div className="flex items-start gap-2 text-sm">
+                  <span className="flex-shrink-0 w-5 h-5 bg-purple-600 text-white rounded-full flex items-center justify-center text-xs font-bold">
+                    1
+                  </span>
+                  <span className="text-gray-600">Tap the menu <span className="font-bold">⋯</span> (three dots)</span>
+                </div>
+                <div className="flex items-start gap-2 text-sm">
+                  <span className="flex-shrink-0 w-5 h-5 bg-purple-600 text-white rounded-full flex items-center justify-center text-xs font-bold">
+                    2
+                  </span>
+                  <span className="text-gray-600">Tap &quot;Add to Home Screen&quot;</span>
+                </div>
+              </>
+            ) : (
+              <>
+                <div className="flex items-start gap-2 text-sm">
+                  <span className="flex-shrink-0 w-5 h-5 bg-purple-600 text-white rounded-full flex items-center justify-center text-xs font-bold">
+                    1
+                  </span>
+                  <span className="text-gray-600">Tap the Share button <span className="inline-block">⬆️</span></span>
+                </div>
+                <div className="flex items-start gap-2 text-sm">
+                  <span className="flex-shrink-0 w-5 h-5 bg-purple-600 text-white rounded-full flex items-center justify-center text-xs font-bold">
+                    2
+                  </span>
+                  <span className="text-gray-600">Tap &quot;Add to Home Screen&quot;</span>
+                </div>
+              </>
+            )}
           </div>
         ) : (
           <button
