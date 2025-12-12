@@ -38,10 +38,18 @@ export default function RoutinePage({ params }: PageProps) {
   useEffect(() => {
     if (data) {
       const todayCompletions = getTodayCompletions(data, kidId);
-      const completed = new Set(todayCompletions.map((c) => c.taskId));
+      // Filter to only include tasks from the current routine
+      const routineTasks = data.tasks
+        .filter((t: Task) => t.routineId === routineId)
+        .map((t: Task) => t.id);
+      const completed = new Set(
+        todayCompletions
+          .filter((c) => routineTasks.includes(c.taskId))
+          .map((c) => c.taskId)
+      );
       setCompletedTaskIds(completed);
     }
-  }, [data, kidId]);
+  }, [data, kidId, routineId]);
 
   // Check for completion celebration when tasks change
   useEffect(() => {

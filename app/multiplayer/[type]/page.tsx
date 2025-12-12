@@ -41,8 +41,14 @@ export default function MultiplayerPage({ params }: PageProps) {
 
       data.kids.forEach((kid: Kid) => {
         const todayCompletions = getTodayCompletions(data, kid.id);
-        const completed = new Set(todayCompletions.map((c) => c.taskId));
         const tasks = data.tasks.filter((t: Task) => t.routineId === routineId).sort((a: Task, b: Task) => a.order - b.order);
+        // Filter completions to only include tasks from the current routine
+        const routineTaskIds = tasks.map((t: Task) => t.id);
+        const completed = new Set(
+          todayCompletions
+            .filter((c) => routineTaskIds.includes(c.taskId))
+            .map((c) => c.taskId)
+        );
         const currentIndex = tasks.findIndex((t: Task) => !completed.has(t.id));
 
         progressMap.set(kid.id, {
