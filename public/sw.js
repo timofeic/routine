@@ -1,62 +1,27 @@
-const CACHE_NAME = 'kids-routine-v1';
-const urlsToCache = [
-  '/',
-  '/manifest.json',
-];
+// PWA Service Worker - Minimal, no fetch interception
+// Only handles PWA features and install
 
-// Install event - cache essential resources
-self.addEventListener('install', (event) => {
-  event.waitUntil(
-    caches.open(CACHE_NAME)
-      .then((cache) => cache.addAll(urlsToCache))
-      .then(() => self.skipWaiting())
-  );
-});
+self.addEventListener('install', function(event) {
+  // Skip the waiting phase and activate immediately
+  self.skipWaiting()
+})
 
-// Activate event - clean up old caches
-self.addEventListener('activate', (event) => {
+self.addEventListener('activate', function(event) {
+  // Clean up any old caches from previous versions
   event.waitUntil(
-    caches.keys().then((cacheNames) => {
+    caches.keys().then(function(cacheNames) {
       return Promise.all(
-        cacheNames.map((cacheName) => {
-          if (cacheName !== CACHE_NAME) {
-            return caches.delete(cacheName);
-          }
+        cacheNames.map(function(cacheName) {
+          // Delete all caches to ensure no interference
+          return caches.delete(cacheName)
         })
-      );
-    }).then(() => self.clients.claim())
-  );
-});
+      )
+    }).then(function() {
+      // Take control of all clients immediately
+      return self.clients.claim()
+    })
+  )
+})
 
-// Fetch event - serve from cache, fallback to network
-self.addEventListener('fetch', (event) => {
-  event.respondWith(
-    caches.match(event.request)
-      .then((response) => {
-        // Cache hit - return response
-        if (response) {
-          return response;
-        }
-
-        return fetch(event.request).then(
-          (response) => {
-            // Check if we received a valid response
-            if (!response || response.status !== 200 || response.type !== 'basic') {
-              return response;
-            }
-
-            // Clone the response
-            const responseToCache = response.clone();
-
-            caches.open(CACHE_NAME)
-              .then((cache) => {
-                cache.put(event.request, responseToCache);
-              });
-
-            return response;
-          }
-        );
-      })
-  );
-});
+// No fetch event listener - let all requests go through normally
 

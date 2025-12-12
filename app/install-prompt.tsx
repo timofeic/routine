@@ -1,175 +1,154 @@
-'use client';
+'use client'
 
-import { useState, useEffect } from 'react';
-import { Download, X, Share, Compass } from 'lucide-react';
+import { useEffect, useState } from 'react'
+import { X, Download, Smartphone } from 'lucide-react'
 
-type PromptType = 'native' | 'ios-safari' | 'ios-other' | null;
+interface BeforeInstallPromptEvent extends Event {
+  readonly platforms: string[]
+  readonly userChoice: Promise<{
+    outcome: 'accepted' | 'dismissed'
+    platform: string
+  }>
+  prompt(): Promise<void>
+}
 
 export function InstallPrompt() {
-  const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
-  const [promptType, setPromptType] = useState<PromptType>(null);
-  const [dismissed, setDismissed] = useState(true); // Start as true to prevent flash
+  const [deferredPrompt, setDeferredPrompt] = useState<BeforeInstallPromptEvent | null>(null)
+  const [showInstallPrompt, setShowInstallPrompt] = useState(false)
+  const [isIOS, setIsIOS] = useState(false)
+  const [mounted, setMounted] = useState(false)
+
+  const DISMISS_STORAGE_KEY = 'install_prompt_dismissed_at'
+  const DISMISS_DURATION = 7 * 24 * 60 * 60 * 1000 // 7 days in milliseconds
 
   useEffect(() => {
-    // Check if already dismissed this session
-    if (sessionStorage.getItem('installPromptDismissed')) {
-      return;
-    }
+    setMounted(true)
+    
+    try {
+      const ua = navigator.userAgent
+      const isiOSDevice = /iPad|iPhone|iPod/.test(ua) || 
+        (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1)
+      setIsIOS(isiOSDevice)
 
-    // Check if already installed as standalone
-    if (window.matchMedia('(display-mode: standalone)').matches) {
-      return;
-    }
-
-    // Detect iOS/iPadOS
-    const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) ||
-      (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
-
-    // Detect Safari on iOS
-    const isSafari = /Safari/.test(navigator.userAgent) && !/CriOS|FxiOS|OPiOS|EdgiOS/.test(navigator.userAgent);
-
-    if (isIOS) {
-      // On iOS, only Safari can add to home screen
-      if (isSafari) {
-        setPromptType('ios-safari');
-        setDismissed(false);
-      } else {
-        // Chrome, Firefox, Edge, etc. on iOS
-        setPromptType('ios-other');
-        setDismissed(false);
+      // Check if app is already installed
+      if (window.matchMedia('(display-mode: standalone)').matches) {
+        return
       }
-    } else {
-      // For Android/Desktop, listen for beforeinstallprompt
-      const handler = (e: Event) => {
-        e.preventDefault();
-        setDeferredPrompt(e);
-        setPromptType('native');
-        setDismissed(false);
-      };
 
-      window.addEventListener('beforeinstallprompt', handler);
+      // Check if already installed on iOS
+      if ((window.navigator as any).standalone) {
+        return
+      }
+
+      // Check localStorage for dismiss timing
+      const dismissedAt = localStorage.getItem(DISMISS_STORAGE_KEY)
+      if (dismissedAt) {
+        const dismissedTime = parseInt(dismissedAt)
+        const now = Date.now()
+        if (now - dismissedTime < DISMISS_DURATION) {
+          return
+        }
+      }
+
+      // Show install prompt for iOS users immediately
+      if (isiOSDevice) {
+        setShowInstallPrompt(true)
+      }
+
+      // Listen for the beforeinstallprompt event (Android/Desktop only)
+      const handleBeforeInstallPrompt = (e: Event) => {
+        e.preventDefault()
+        setDeferredPrompt(e as BeforeInstallPromptEvent)
+        setShowInstallPrompt(true)
+      }
+
+      window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt)
 
       return () => {
-        window.removeEventListener('beforeinstallprompt', handler);
-      };
+        window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt)
+      }
+    } catch (error) {
+      console.error('Error in InstallPrompt:', error)
     }
-  }, []);
+  }, [])
 
-  const handleInstall = async () => {
-    if (!deferredPrompt) return;
-
-    deferredPrompt.prompt();
-    await deferredPrompt.userChoice;
-    setDeferredPrompt(null);
-    setPromptType(null);
-    setDismissed(true);
-  };
+  const handleInstallClick = async () => {
+    if (deferredPrompt) {
+      deferredPrompt.prompt()
+      const { outcome } = await deferredPrompt.userChoice
+      if (outcome === 'accepted') {
+        setDeferredPrompt(null)
+        setShowInstallPrompt(false)
+      }
+    }
+  }
 
   const handleDismiss = () => {
-    setDismissed(true);
-    sessionStorage.setItem('installPromptDismissed', 'true');
-  };
-
-  const handleOpenInSafari = () => {
-    // Copy current URL to clipboard for easy pasting
-    navigator.clipboard?.writeText(window.location.href);
-    // Show feedback then dismiss
-    setTimeout(() => handleDismiss(), 1500);
-  };
-
-  if (dismissed || !promptType) {
-    return null;
+    try {
+      localStorage.setItem(DISMISS_STORAGE_KEY, Date.now().toString())
+    } catch (e) {
+      // localStorage might not be available
+    }
+    setShowInstallPrompt(false)
+    setDeferredPrompt(null)
   }
 
-  // iOS using non-Safari browser (Chrome, Firefox, etc.)
-  if (promptType === 'ios-other') {
-    return (
-      <div className="pointer-events-none fixed inset-0 z-50 flex items-end justify-center p-4 pb-safe">
-        <div className="pointer-events-auto w-full max-w-md animate-bounce-in rounded-2xl bg-gradient-to-r from-blue-600 to-cyan-600 p-4 shadow-2xl">
-          <div className="flex items-start justify-between gap-4">
-            <div className="flex-1">
-              <div className="flex items-center gap-3 mb-2">
-                <Compass className="h-6 w-6 text-white" />
-                <h3 className="text-lg font-bold text-white">Open in Safari</h3>
-              </div>
-              <p className="text-sm text-white/90">
-                To add this app to your home screen, you need to open it in Safari. Tap below to copy the link!
-              </p>
-            </div>
-            <button
-              onClick={handleDismiss}
-              className="rounded-full p-1 text-white/80 hover:text-white transition-colors"
-            >
-              <X className="h-5 w-5" />
-            </button>
-          </div>
-          <button
-            onClick={handleOpenInSafari}
-            className="mt-3 w-full rounded-full bg-white px-6 py-3 font-bold text-blue-600 shadow-lg transition-transform hover:scale-105 active:scale-95"
-          >
-            Copy Link for Safari
-          </button>
-        </div>
-      </div>
-    );
-  }
+  // Don't render anything until mounted (prevents hydration issues)
+  if (!mounted) return null
+  
+  // Don't show if not needed
+  if (!showInstallPrompt) return null
 
-  // iOS Safari - show share button instructions
-  if (promptType === 'ios-safari') {
-    return (
-      <div className="pointer-events-none fixed inset-0 z-50 flex items-end justify-center p-4 pb-safe">
-        <div className="pointer-events-auto w-full max-w-md animate-bounce-in rounded-2xl bg-gradient-to-r from-purple-600 to-pink-600 p-4 shadow-2xl">
-          <div className="flex items-start justify-between gap-4">
-            <div className="flex-1">
-              <div className="flex items-center gap-3 mb-2">
-                <Share className="h-6 w-6 text-white" />
-                <h3 className="text-lg font-bold text-white">Add to Home Screen</h3>
-              </div>
-              <p className="text-sm text-white/90">
-                Tap the <span className="inline-flex items-center"><Share className="h-4 w-4 mx-1" /></span> share button, then scroll down and tap <strong>&quot;Add to Home Screen&quot;</strong>
-              </p>
-            </div>
-            <button
-              onClick={handleDismiss}
-              className="rounded-full p-1 text-white/80 hover:text-white transition-colors"
-            >
-              <X className="h-5 w-5" />
-            </button>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  // Native install prompt (Android/Desktop Chrome)
   return (
-    <div className="pointer-events-none fixed inset-0 z-50 flex items-end justify-center p-4 pb-safe">
-      <div className="pointer-events-auto w-full max-w-md animate-bounce-in rounded-2xl bg-gradient-to-r from-purple-600 to-pink-600 p-4 shadow-2xl">
-        <div className="flex items-start justify-between gap-4">
-          <div className="flex-1">
-            <div className="flex items-center gap-3 mb-2">
-              <Download className="h-6 w-6 text-white" />
-              <h3 className="text-lg font-bold text-white">Install App</h3>
+    <div className="fixed bottom-4 right-4 z-50 max-w-sm animate-bounce-in">
+      <div className="rounded-2xl bg-white p-4 shadow-2xl border border-gray-200">
+        <div className="flex items-center justify-between mb-3">
+          <div className="flex items-center gap-2">
+            <div className="rounded-full bg-purple-100 p-2">
+              <Smartphone className="h-5 w-5 text-purple-600" />
             </div>
-            <p className="text-sm text-white/90">
-              Add to your home screen for a better experience and offline access!
-            </p>
+            <div>
+              <h3 className="font-bold text-gray-900 text-sm">
+                {isIOS ? 'Add to Home Screen' : 'Install App'}
+              </h3>
+              <p className="text-xs text-gray-500">
+                {isIOS ? 'For quick access' : 'Add to your device'}
+              </p>
+            </div>
           </div>
           <button
             onClick={handleDismiss}
-            className="rounded-full p-1 text-white/80 hover:text-white transition-colors"
+            className="rounded-full p-1 text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition-colors"
           >
             <X className="h-5 w-5" />
           </button>
         </div>
-        <button
-          onClick={handleInstall}
-          className="mt-3 w-full rounded-full bg-white px-6 py-3 font-bold text-purple-600 shadow-lg transition-transform hover:scale-105 active:scale-95"
-        >
-          Install Now
-        </button>
+
+        {isIOS ? (
+          <div className="space-y-2">
+            <div className="flex items-start gap-2 text-sm">
+              <span className="flex-shrink-0 w-5 h-5 bg-purple-600 text-white rounded-full flex items-center justify-center text-xs font-bold">
+                1
+              </span>
+              <span className="text-gray-600">Tap the Share button <span className="inline-block">⬆️</span></span>
+            </div>
+            <div className="flex items-start gap-2 text-sm">
+              <span className="flex-shrink-0 w-5 h-5 bg-purple-600 text-white rounded-full flex items-center justify-center text-xs font-bold">
+                2
+              </span>
+              <span className="text-gray-600">Tap &quot;Add to Home Screen&quot;</span>
+            </div>
+          </div>
+        ) : (
+          <button
+            onClick={handleInstallClick}
+            className="w-full flex items-center justify-center gap-2 rounded-full bg-gradient-to-r from-purple-600 to-pink-600 px-4 py-2.5 text-sm font-bold text-white shadow-lg transition-transform hover:scale-105 active:scale-95"
+          >
+            <Download className="h-4 w-4" />
+            Install App
+          </button>
+        )}
       </div>
     </div>
-  );
+  )
 }
-
